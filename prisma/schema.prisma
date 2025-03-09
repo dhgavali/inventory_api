@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OPERATOR
+  SHIFT_INCHARGE
+  SUPERVISOR
+  MANAGER
+  ADMIN
+}
+
+enum StockSource {
+  MANUFACTURED
+  SUPPLIER
+}
+
+enum TokenType {
+  ACCESS
+  REFRESH
+  RESET_PASSWORD
+}
+
+model Plant {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  products    Product[]
+  stocks      Stock[]
+  inwards     Inward[]
+  outwards    Outward[]
+  suppliers   Supplier[]
+  
+  createdById String?
+  createdBy   User?   @relation("PlantCreatedBy", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?   @relation("PlantUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([code])
+}
+
+model User {
+  id              String   @id @default(uuid())
+  name            String
+  mobileNumber    String   @unique
+  password        String
+  plainPassword   String?  
+  employeeCode    String?  
+  role            UserRole
+  dateRegistered  DateTime @default(now())
+  photo           String? 
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  plantId         String?
+  plant           Plant?   @relation(fields: [plantId], references: [id])
+  
+  tokens          Token[]
+  
+  inwardsCreated  Inward[]  @relation("InwardCreatedBy")
+  inwardsUpdated  Inward[]  @relation("InwardUpdatedBy")
+  outwardsCreated Outward[] @relation("OutwardCreatedBy")
+  
+  plantsCreated   Plant[]   @relation("PlantCreatedBy")
+  plantsUpdated   Plant[]   @relation("PlantUpdatedBy")
+  
+  productsCreated Product[] @relation("ProductCreatedBy")
+  productsUpdated Product[] @relation("ProductUpdatedBy")
+  
+  suppliersCreated Supplier[] @relation("SupplierCreatedBy")
+  suppliersUpdated Supplier[] @relation("SupplierUpdatedBy")
+  
+  stocksCreated    Stock[]   @relation("StockCreatedBy")
+  stocksUpdated    Stock[]   @relation("StockUpdatedBy")
+  
+  createdById      String?
+  createdBy        User?    @relation("UserCreatedBy", fields: [createdById], references: [id])
+  updatedById      String?
+  updatedBy        User?    @relation("UserUpdatedBy", fields: [updatedById], references: [id])
+  
+  usersCreated     User[]   @relation("UserCreatedBy")
+  usersUpdated     User[]   @relation("UserUpdatedBy")
+
+  @@index([plantId, role])
+  @@index([mobileNumber])
+}
+
+model Token {
+  id          String    @id @default(uuid())
+  token       String    @db.Text 
+
+  type        TokenType
+  expires     DateTime
+  createdAt   DateTime  @default(now())
+  
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  designName      String
+  designCode      String
+  neck            Float
+  volume          Float
+  weight          Float
+  colour          String
+  itemCode        String   @unique
+  unitType        String
+  buyPrice        Float
+  sellPrice       Float
+  remark          String?
+  minStockAlert   Int
+  openingStock    Int
+  qrBarcode       String?
+  bagSize         Int
+  traySize        Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  plantId         String
+  plant           Plant    @relation(fields: [plantId], references: [id])
+  stocks          Stock[]
+  inwards         Inward[]
+  outwards        Outward[]
+  
+  createdById     String?
+  createdBy       User?    @relation("ProductCreatedBy", fields: [createdById], references: [id])
+  updatedById     String?
+  updatedBy       User?    @relation("ProductUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([plantId, itemCode])
+  @@index([designCode])
+}
+
+model Stock {
+  id              String   @id @default(uuid())
+  date            DateTime @default(now())
+  openingStock    Int
+  inwardQty       Int      @default(0)
+  outwardQty      Int      @default(0)
+  closingStock    Int
+  
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  plantId         String
+  plant           Plant    @relation(fields: [plantId], references: [id])
+  
+  createdById     String?
+  createdBy       User?    @relation("StockCreatedBy", fields: [createdById], references: [id])
+  updatedById     String?
+  updatedBy       User?    @relation("StockUpdatedBy", fields: [updatedById], references: [id])
+
+  @@unique([productId, date])
+  @@index([plantId, date])
+}
+
+model Supplier {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  city            String?
+  email           String?
+  mobileNumber    String?
+  remark          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  plantId         String
+  plant           Plant    @relation(fields: [plantId], references: [id])
+  inwards         Inward[]
+  
+  createdById     String?
+  createdBy       User?    @relation("SupplierCreatedBy", fields: [createdById], references: [id])
+  updatedById     String?
+  updatedBy       User?    @relation("SupplierUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([plantId, code])
+}
+
+model Inward {
+  id              String      @id @default(uuid())
+  source          StockSource
+  manufacturedQty Int?       
+  qtyIncharge     Int?        
+  qtySupervisor   Int?        
+  finalQty        Int
+  supplierName    String?    
+  supplierCode    String?    
+  openingStock    Int?       
+  closingStock    Int?       
+  date            DateTime    @default(now())
+  time            DateTime    @default(now())
+  status          String      @default("PENDING") 
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  productId       String
+  product         Product     @relation(fields: [productId], references: [id])
+  plantId         String
+  plant           Plant       @relation(fields: [plantId], references: [id])
+  createdById     String
+  createdBy       User        @relation("InwardCreatedBy", fields: [createdById], references: [id])
+  supervisorId    String?
+  supervisor      User?       @relation("InwardUpdatedBy", fields: [supervisorId], references: [id])
+  supplierId      String?
+  supplier        Supplier?   @relation(fields: [supplierId], references: [id])
+
+  @@index([plantId, date])
+  @@index([productId, date])
+  @@index([status])
+}
+
+model Outward {
+  id              String   @id @default(uuid())
+  quantity        Int
+  remarks         String?
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  plantId         String
+  plant           Plant    @relation(fields: [plantId], references: [id])
+  createdById     String
+  createdBy       User     @relation("OutwardCreatedBy", fields: [createdById], references: [id])
+
+  @@index([plantId, date])
+  @@index([productId, date])
+}
+
+model MonthlyReport {
+  id              String   @id @default(uuid())
+  month           Int 
+  year            Int
+  openingStock    Int
+  inwardQty       Int
+  outwardQty      Int
+  closingStock    Int
+  generatedAt     DateTime @default(now())
+
+  productId       String
+  plantId         String
+
+  @@unique([productId, month, year, plantId])
+  @@index([plantId, year, month])
+}
