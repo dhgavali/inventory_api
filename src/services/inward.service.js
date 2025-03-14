@@ -213,7 +213,6 @@ const queryInwards = async (filter, options, loggedInUser) => {
           outwardQty: true,
           closingStock: true,
           openingStock: true,
-          stockStatus: true,
         },
       },
       supplier: {
