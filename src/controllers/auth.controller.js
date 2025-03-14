@@ -13,7 +13,7 @@ const login = catchAsync(async (req, res) => {
   const { mobileNumber, password } = req.body;
   const user = await authService.loginUserWithMobileAndPassword(mobileNumber, password);
   const tokens = await tokenService.generateAuthTokens(user);
-  res.send(ApiResponse.success(httpStatus.OK, 'User logged in successfully', { user, tokens }));
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'User logged in successfully', { user, tokens }));
 });
 
 const logout = catchAsync(async (req, res) => {
