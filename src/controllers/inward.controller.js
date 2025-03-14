@@ -1,4 +1,5 @@
 const httpStatus = require("http-status");
+const ApiResponse = require("../utils/ApiResponse");
 const ApiError = require("../utils/ApiError");
 const catchAsync = require("../utils/catchAsync");
 const pick = require("../utils/pick");
@@ -17,7 +18,7 @@ const createInward = catchAsync(async (req, res) => {
   }
 
   const inward = await inwardService.createInward(req.body, req.user);
-  res.status(httpStatus.CREATED).send(inward);
+  res.status(httpStatus.CREATED).send(ApiResponse.success(httpStatus.CREATED, 'Inward created successfully', inward));
 });
 
 /**
@@ -25,12 +26,12 @@ const createInward = catchAsync(async (req, res) => {
  * @route GET /api/v1/inwards
  */
 const getInwards = catchAsync(async (req, res) => {
-  if (!req.user.plantId) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "You must be assigned to a plant to view inward entries"
-    );
-  }
+  // if (!req.user.plantId) {
+  //   throw new ApiError(
+  //     httpStatus.BAD_REQUEST,
+  //     "You must be assigned to a plant to view inward entries"
+  //   );
+  // }
 
   const filter = pick(req.query, [
     "status",
@@ -53,7 +54,7 @@ const getInwards = catchAsync(async (req, res) => {
 
   const options = pick(req.query, ["sortBy", "limit", "page", "sortOrder"]);
   const result = await inwardService.queryInwards(filter, options, req.user);
-  res.send(result);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Inwards fetched successfully', result));
 });
 
 /**
@@ -92,7 +93,7 @@ const getInward = catchAsync(async (req, res) => {
     );
   }
 
-  res.send(inward);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Inward fetched successfully', inward));
 });
 
 /**

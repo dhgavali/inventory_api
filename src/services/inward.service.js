@@ -18,13 +18,13 @@ const createInward = async (inwardData, loggedInUser) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
   }
 
-  // Check if the product belongs to the user's plant
-  if (product.plantId !== loggedInUser.plantId) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "You can only create inward entries for products in your plant"
-    );
-  }
+  // // Check if the product belongs to the user's plant
+  // if (product.plantId !== loggedInUser.plantId) {
+  //   throw new ApiError(
+  //     httpStatus.FORBIDDEN,
+  //     "You can only create inward entries for products in your plant"
+  //   );
+  // }
 
   // If source is SUPPLIER, validate supplier
   if (inwardData.source === "SUPPLIER" && inwardData.supplierId) {
@@ -37,12 +37,12 @@ const createInward = async (inwardData, loggedInUser) => {
     }
 
     // Check if supplier belongs to the user's plant
-    if (supplier.plantId !== loggedInUser.plantId) {
-      throw new ApiError(
-        httpStatus.FORBIDDEN,
-        "You can only use suppliers from your plant"
-      );
-    }
+    // if (supplier.plantId !== loggedInUser.plantId) {
+    //   throw new ApiError(
+    //     httpStatus.FORBIDDEN,
+    //     "You can only use suppliers from your plant"
+    //   );
+    // }
 
     // Set supplier name and code
     inwardData.supplierName = supplier.name;
@@ -185,15 +185,17 @@ const queryInwards = async (filter, options, loggedInUser) => {
   const limit = options.limit || 10;
   const skip = (page - 1) * limit;
 
-  const whereCondition = {
-    ...filter,
-    plantId: loggedInUser.plantId,
-  };
+  // const whereCondition = {
+  //   ...filter,
+  //   plantId: loggedInUser.plantId,
+  // };
 
   // If user is SHIFT_INCHARGE, only show their entries
   if (loggedInUser.role === "SHIFT_INCHARGE") {
     whereCondition.createdById = loggedInUser.id;
   }
+
+
 
   const inwards = await prisma.inward.findMany({
     where: whereCondition,
@@ -207,6 +209,11 @@ const queryInwards = async (filter, options, loggedInUser) => {
         select: {
           designName: true,
           itemCode: true,
+          inwardQty: true,
+          outwardQty: true,
+          closingStock: true,
+          openingStock: true,
+          stockStatus: true,
         },
       },
       supplier: {
@@ -233,6 +240,14 @@ const queryInwards = async (filter, options, loggedInUser) => {
   const count = await prisma.inward.count({
     where: whereCondition,
   });
+
+  const columns = [
+    { field: 'id', headerName: 'ID', width: 100 },
+    { field: 'designName', headerName: 'Design Name', width: 150 },
+    { field: 'itemCode', headerName: 'Item Code', width: 150 },
+    { field: 'supplierName', headerName: 'Supplier Name', width: 150 },
+    { field: 'supplierCode', headerName: 'Supplier Code', width: 150 },
+  ];
 
   return {
     inwards,
