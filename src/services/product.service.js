@@ -16,7 +16,8 @@ const createProduct = async (productData, loggedInUser) => {
   return prisma.product.create({
     data: {
       ...productData,
-      plantId: loggedInUser.plantId,
+      plantId: "eea87b46-0ab1-4b8e-9e36-3523c1a3e14c",
+    
       createdById: loggedInUser.id,
       updatedById: loggedInUser.id,
     },
@@ -57,13 +58,12 @@ const queryProducts = async (filter, options, loggedInUser) => {
   const limit = options.limit || 10;
   const skip = (page - 1) * limit;
 
-  const whereCondition = {
-    ...filter,
-    plantId: loggedInUser.plantId,
-  };
+  // const whereCondition = {
+  //   ...filter,
+  //   plantId: loggedInUser.plantId,
+  // };
 
   const products = await prisma.product.findMany({
-    where: whereCondition,
     skip,
     take: limit,
     orderBy: options.sortBy
@@ -71,9 +71,8 @@ const queryProducts = async (filter, options, loggedInUser) => {
       : { createdAt: "desc" },
   });
 
-  const count = await prisma.product.count({
-    where: whereCondition,
-  });
+  const count = await prisma.product.count();
+
 
   return {
     products,
@@ -91,9 +90,6 @@ const queryProducts = async (filter, options, loggedInUser) => {
  */
 const getProductList = async (loggedInUser) => {
   return prisma.product.findMany({
-    where: {
-      plantId: loggedInUser.plantId,
-    },
     select: {
       id: true,
       designName: true,
@@ -118,13 +114,13 @@ const updateProductById = async (productId, updateBody, loggedInUser) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
   }
 
-  // Check if the product belongs to the user's plant
-  if (product.plantId !== loggedInUser.plantId) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "You can only update products in your plant"
-    );
-  }
+  // // Check if the product belongs to the user's plant
+  // if (product.plantId !== loggedInUser.plantId) {
+  //   throw new ApiError(
+  //     httpStatus.FORBIDDEN,
+  //     "You can only update products in your plant"
+  //   );
+  // }
 
   // If itemCode is being updated, check if it already exists
   if (
@@ -157,12 +153,12 @@ const deleteProductById = async (productId, loggedInUser) => {
   }
 
   // Check if the product belongs to the user's plant
-  if (product.plantId !== loggedInUser.plantId) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "You can only delete products in your plant"
-    );
-  }
+  // if (product.plantId !== loggedInUser.plantId) {
+  //   throw new ApiError(
+  //     httpStatus.FORBIDDEN,
+  //     "You can only delete products in your plant"
+  //   );
+  // }
 
   // Check if product is used in stocks, inwards, or outwards
   const stockCount = await prisma.stock.count({
