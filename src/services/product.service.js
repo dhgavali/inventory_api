@@ -16,7 +16,7 @@ const createProduct = async (productData, loggedInUser) => {
   return prisma.product.create({
     data: {
       ...productData,
-      plantId: "eea87b46-0ab1-4b8e-9e36-3523c1a3e14c",
+      plantId: loggedInUser.plantId,
     
       createdById: loggedInUser.id,
       updatedById: loggedInUser.id,
@@ -72,6 +72,14 @@ const queryProducts = async (filter, options, loggedInUser) => {
   });
 
   const count = await prisma.product.count();
+  const plants = await prisma.plant.findMany();
+  const plantsMap = plants.reduce((acc, plant) => {
+    acc[plant.id] = plant.name;
+    return acc;
+  }, {});
+  products.forEach(product => {
+    product.plantName = plantsMap[product.plantId];
+  });
 
   const columns = getProductColumns(loggedInUser.role);
   return {
