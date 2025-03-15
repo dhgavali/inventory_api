@@ -25,8 +25,14 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh ec2-user@${{ secrets.EC2_HOST }} '
-          cd /home/ec2-user/inventory-app
-          git pull origin main
+          cd /home/ec2-user/inventory-app/inventory_api
+          if [ -d .git ]; then
+            git pull origin main
+          else
+            echo "Not a git repository. Please check the path."
+            exit 1
+          fi
+          
           npm install
-          pm2 restart all || pm2 start src/index.js --name "inventory-api"
+          pm2 restart app || pm2 start src/index.js --name "app"
         '
