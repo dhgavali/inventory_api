@@ -54,6 +54,7 @@ const queryPlants = async (filter, options, loggedInUser) => {
 
   return {
     plants,
+    columns,
     page,
     limit,
     totalPages: Math.ceil(count / limit),
