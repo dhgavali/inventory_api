@@ -2,7 +2,7 @@ const httpStatus = require('http-status');
 const bcrypt = require('bcryptjs');
 const ApiError = require('../utils/ApiError');
 const prisma = require('../database/prisma');
-
+const { getUserColumns } = require('../utils/ColumnModels');
 const createUser = async (userBody, loggedInUser = null) => {
   if (await getUserByMobile(userBody.mobileNumber)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Mobile number already taken');
@@ -60,12 +60,26 @@ const queryUsers = async (filter, options, loggedInUser) => {
     orderBy: options.sortBy ? { [options.sortBy]: options.sortOrder || 'asc' } : { createdAt: 'desc' },
   });
 
+  // adding plant name to the users
+  const plants = await prisma.plant.findMany();
+  const plantsMap = plants.reduce((acc, plant) => {
+    acc[plant.id] = plant.name;
+    return acc;
+  }, {});
+
+  users.forEach(user => {
+    user.plantName = plantsMap[user.plantId];
+  });
+
   const count = await prisma.user.count({
     where: whereCondition,
   });
+  
+  const columns = getUserColumns(loggedInUser.role);
 
   return {
     users,
+    columns,
     page,
     limit,
     totalPages: Math.ceil(count / limit),

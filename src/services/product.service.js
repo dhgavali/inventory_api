@@ -1,7 +1,7 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
 const prisma = require("../database/prisma");
-
+const { getProductColumns } = require("../utils/ColumnModels");
 /**
  * Create a new product
  * @param {Object} productData
@@ -57,21 +57,7 @@ const queryProducts = async (filter, options, loggedInUser) => {
   const page = options.page || 1;
   const limit = options.limit || 10;
   const skip = (page - 1) * limit;
-  const columns = [
-    { field: 'id', headerName: 'ID', width: 100 },
-    { field: 'designName', headerName: 'Design Name', width: 150 },
-    { field: 'designCode', headerName: 'Design Code', width: 150 },
-    { field: 'colour', headerName: 'Colour', width: 150 },
-    { field: 'itemCode', headerName: 'Item Code', width: 150 },
-    { field: 'unitType', headerName: 'Unit Type', width: 150 },
-    { field: 'buyPrice', headerName: 'Buy Price', width: 150 },
-    { field: 'sellPrice', headerName: 'Sell Price', width: 150 },
-    { field: 'minStockAlert', headerName: 'Min Stock Alert', width: 150 },
-    { field: 'openingStock', headerName: 'Opening Stock', width: 150 },
-    { field: 'createdAt', headerName: 'Created At', width: 150 },
-    { field: 'updatedAt', headerName: 'Updated At', width: 150 },
-    { field: 'handleProcess', headerName: 'Handle Process', width: 150 },
-  ];
+  
   // const whereCondition = {
   //   ...filter,
   //   plantId: loggedInUser.plantId,
@@ -87,7 +73,7 @@ const queryProducts = async (filter, options, loggedInUser) => {
 
   const count = await prisma.product.count();
 
-
+  const columns = getProductColumns(loggedInUser.role);
   return {
     products,
     columns,

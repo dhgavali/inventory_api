@@ -1,7 +1,7 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
 const prisma = require("../database/prisma");
-
+const { getInwardColumns } = require("../utils/ColumnModels");
 /**
  * Create a new inward entry
  * @param {Object} inwardData
@@ -190,6 +190,11 @@ const queryInwards = async (filter, options, loggedInUser) => {
   //   plantId: loggedInUser.plantId,
   // };
 
+  const whereCondition = {
+    ...filter,
+    plantId: loggedInUser.plantId,
+  };
+
   // If user is SHIFT_INCHARGE, only show their entries
   if (loggedInUser.role === "SHIFT_INCHARGE") {
     whereCondition.createdById = loggedInUser.id;
@@ -209,10 +214,10 @@ const queryInwards = async (filter, options, loggedInUser) => {
         select: {
           designName: true,
           itemCode: true,
-          inwardQty: true,
-          outwardQty: true,
-          closingStock: true,
-          openingStock: true,
+          // inwardQty: true,
+          // outwardQty: true,
+          // closingStock: true,
+          // openingStock:/ true,
         },
       },
       supplier: {
@@ -240,16 +245,12 @@ const queryInwards = async (filter, options, loggedInUser) => {
     where: whereCondition,
   });
 
-  const columns = [
-    { field: 'id', headerName: 'ID', width: 100 },
-    { field: 'designName', headerName: 'Design Name', width: 150 },
-    { field: 'itemCode', headerName: 'Item Code', width: 150 },
-    { field: 'supplierName', headerName: 'Supplier Name', width: 150 },
-    { field: 'supplierCode', headerName: 'Supplier Code', width: 150 },
-  ];
 
+
+  const columns = getInwardColumns(loggedInUser.role);
   return {
     inwards,
+    columns,
     page,
     limit,
     totalPages: Math.ceil(count / limit),

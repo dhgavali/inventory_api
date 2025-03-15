@@ -1,7 +1,7 @@
 const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
 const prisma = require('../database/prisma');
-
+const { getPlantColumns } = require('../utils/ColumnModels');
 const createPlant = async (plantData, loggedInUser) => {
   if (await getPlantByCode(plantData.code)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Plant code already exists');
@@ -28,7 +28,7 @@ const getPlantByCode = async (code) => {
   });
 };
 
-const queryPlants = async (filter, options) => {
+const queryPlants = async (filter, options, loggedInUser) => {
   const page = options.page || 1;
   const limit = options.limit || 10;
   const skip = (page - 1) * limit;
@@ -44,8 +44,11 @@ const queryPlants = async (filter, options) => {
     where: filter,
   });
 
+  const columns = getPlantColumns(loggedInUser.role);
+
   return {
     plants,
+    columns,
     page,
     limit,
     totalPages: Math.ceil(count / limit),
