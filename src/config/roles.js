@@ -13,11 +13,11 @@ const allRoles = {
   MANAGER: [
     'getProducts',
     'getSuppliers',
+    'manageSuppliers',
     'getStock',
     'createInward',
     'createOutward',
     'manageProducts',
-    'manageSuppliers',
     'getReports',
   ],
   ADMIN: [

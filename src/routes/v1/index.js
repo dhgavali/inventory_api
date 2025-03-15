@@ -3,6 +3,7 @@ const authRoute = require("./auth.route");
 const userRoute = require("./user.route");
 const plantRoute = require("./plant.route");
 const productRoute = require("./product.route");
+const supplierRoute = require("./supplier.route");
 const inwardRoute = require("./inward.route");
 const outwardRoute = require("./outward.route");
 const stockRoute = require("./stock.route");
@@ -26,6 +27,10 @@ const defaultRoutes = [
   {
     path: "/products",
     route: productRoute,
+  },
+  {
+    path: "/suppliers",
+    route: supplierRoute,
   },
   {
     path: "/inwards",
