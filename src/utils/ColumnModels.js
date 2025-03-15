@@ -88,8 +88,7 @@ const getInwardColumns = (userRole) => {
   ];
 
   if (userRole === 'ADMIN') {
-    baseColumns.push({ field: 'handleProcess', headerName: 'Actions', width: 150 });
-  }
+    baseColumns.push({ field: 'handleProcess', headerName: 'Actions', width: 150 }); }
   
   return baseColumns;
 };
