@@ -72,9 +72,10 @@ const querySuppliers = async (filter, options, loggedInUser) => {
   const count = await prisma.supplier.count({
     where: whereCondition,
   });
-
+  const columns = getSupplierColumns(loggedInUser.role);
   return {
     suppliers,
+    columns,
     page,
     limit,
     totalPages: Math.ceil(count / limit),
