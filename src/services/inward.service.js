@@ -3,145 +3,155 @@ const ApiError = require("../utils/ApiError");
 const prisma = require("../database/prisma");
 const { getInwardColumns } = require("../utils/ColumnModels");
 /**
- * Create a new inward entry
- * @param {Object} inwardData
+ * Create new inward entries (single or multiple)
+ * @param {Object|Array} inwardData - Single inward object or array of inward objects
  * @param {Object} loggedInUser
- * @returns {Promise<Object>}
+ * @returns {Promise<Object|Array>}
  */
 const createInward = async (inwardData, loggedInUser) => {
-  // Check if the product exists
-  const product = await prisma.product.findUnique({
-    where: { id: inwardData.productId },
-  });
+  // Check if input is an array, if not, convert to array for consistent processing
+  const inwardItems = Array.isArray(inwardData) ? inwardData : [inwardData];
+  const results = [];
 
-  if (!product) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
-  }
-
-  // // Check if the product belongs to the user's plant
-  // if (product.plantId !== loggedInUser.plantId) {
-  //   throw new ApiError(
-  //     httpStatus.FORBIDDEN,
-  //     "You can only create inward entries for products in your plant"
-  //   );
-  // }
-
-  // If source is SUPPLIER, validate supplier
-  if (inwardData.source === "SUPPLIER" && inwardData.supplierId) {
-    const supplier = await prisma.supplier.findUnique({
-      where: { id: inwardData.supplierId },
+  // Process each inward item
+  for (const item of inwardItems) {
+    // Check if the product exists
+    const product = await prisma.product.findUnique({
+      where: { id: item.productId },
     });
 
-    if (!supplier) {
-      throw new ApiError(httpStatus.NOT_FOUND, "Supplier not found");
+    if (!product) {
+      throw new ApiError(httpStatus.NOT_FOUND, `Product not found for item: ${JSON.stringify(item)}`);
     }
 
-    // Check if supplier belongs to the user's plant
-    // if (supplier.plantId !== loggedInUser.plantId) {
+    // // Check if the product belongs to the user's plant
+    // if (product.plantId !== loggedInUser.plantId) {
     //   throw new ApiError(
     //     httpStatus.FORBIDDEN,
-    //     "You can only use suppliers from your plant"
+    //     "You can only create inward entries for products in your plant"
     //   );
     // }
 
-    // Set supplier name and code
-    inwardData.supplierName = supplier.name;
-    inwardData.supplierCode = supplier.code;
-  }
+    // If source is SUPPLIER, validate supplier
+    if (item.source === "SUPPLIER" && item.supplierId) {
+      const supplier = await prisma.supplier.findUnique({
+        where: { id: item.supplierId },
+      });
 
-  // Get the current stock for opening stock
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
+      if (!supplier) {
+        throw new ApiError(httpStatus.NOT_FOUND, `Supplier not found for item: ${JSON.stringify(item)}`);
+      }
 
-  const existingStock = await prisma.stock.findFirst({
-    where: {
-      productId: inwardData.productId,
-      date: {
-        lt: currentDate,
-      },
-    },
-    orderBy: {
-      date: "desc",
-    },
-  });
+      // Check if supplier belongs to the user's plant
+      // if (supplier.plantId !== loggedInUser.plantId) {
+      //   throw new ApiError(
+      //     httpStatus.FORBIDDEN,
+      //     "You can only use suppliers from your plant"
+      //   );
+      // }
 
-  const openingStock = existingStock
-    ? existingStock.closingStock
-    : product.openingStock;
-  const finalQty =
-    inwardData.finalQty ||
-    (inwardData.source === "MANUFACTURED" ? inwardData.qtySupervisor || 0 : 0);
-  const closingStock = openingStock + finalQty;
+      // Set supplier name and code
+      item.supplierName = supplier.name;
+      item.supplierCode = supplier.code;
+    }
 
-  // Set status based on user role
-  let status = "PENDING";
-  if (
-    loggedInUser.role === "SUPERVISOR" ||
-    loggedInUser.role === "MANAGER" ||
-    loggedInUser.role === "ADMIN"
-  ) {
-    status = "APPROVED";
-  }
+    // Get the current stock for opening stock
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
 
-  // Create inward entry
-  const inward = await prisma.inward.create({
-    data: {
-      ...inwardData,
-      openingStock,
-      closingStock,
-      status,
-      plantId: loggedInUser.plantId,
-      createdById: loggedInUser.id,
-      finalQty: finalQty,
-    },
-  });
-
-  // Update or create stock entry for the day
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const todayStock = await prisma.stock.findUnique({
-    where: {
-      productId_date: {
-        productId: inwardData.productId,
-        date: today,
-      },
-    },
-  });
-
-  if (todayStock) {
-    // Update existing stock
-    await prisma.stock.update({
+    const existingStock = await prisma.stock.findFirst({
       where: {
-        id: todayStock.id,
+        productId: item.productId,
+        date: {
+          lt: currentDate,
+        },
       },
-      data: {
-        inwardQty: todayStock.inwardQty + finalQty,
-        closingStock:
-          todayStock.openingStock +
-          todayStock.inwardQty +
-          finalQty -
-          todayStock.outwardQty,
-        updatedById: loggedInUser.id,
+      orderBy: {
+        date: "desc",
       },
     });
-  } else {
-    // Create new stock entry
-    await prisma.stock.create({
+
+    const openingStock = existingStock
+      ? existingStock.closingStock
+      : product.openingStock;
+    const finalQty =
+      item.finalQty ||
+      (item.source === "MANUFACTURED" ? item.qtySupervisor || 0 : 0);
+    const closingStock = openingStock + finalQty;
+
+    // Set status based on user role
+    let status = "PENDING";
+    if (
+      loggedInUser.role === "SUPERVISOR" ||
+      loggedInUser.role === "MANAGER" ||
+      loggedInUser.role === "ADMIN"
+    ) {
+      status = "APPROVED";
+    }
+
+    // Create inward entry
+    const inward = await prisma.inward.create({
       data: {
-        productId: inwardData.productId,
-        plantId: loggedInUser.plantId,
-        date: today,
+        ...item,
         openingStock,
-        inwardQty: finalQty,
-        closingStock: openingStock + finalQty,
+        closingStock,
+        status,
+        plantId: loggedInUser.plantId,
         createdById: loggedInUser.id,
-        updatedById: loggedInUser.id,
+        finalQty: finalQty,
       },
     });
+
+    // Update or create stock entry for the day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayStock = await prisma.stock.findUnique({
+      where: {
+        productId_date: {
+          productId: item.productId,
+          date: today,
+        },
+      },
+    });
+
+    if (todayStock) {
+      // Update existing stock
+      await prisma.stock.update({
+        where: {
+          id: todayStock.id,
+        },
+        data: {
+          inwardQty: todayStock.inwardQty + finalQty,
+          closingStock:
+            todayStock.openingStock +
+            todayStock.inwardQty +
+            finalQty -
+            todayStock.outwardQty,
+          updatedById: loggedInUser.id,
+        },
+      });
+    } else {
+      // Create new stock entry
+      await prisma.stock.create({
+        data: {
+          productId: item.productId,
+          plantId: loggedInUser.plantId,
+          date: today,
+          openingStock,
+          inwardQty: finalQty,
+          closingStock: openingStock + finalQty,
+          createdById: loggedInUser.id,
+          updatedById: loggedInUser.id,
+        },
+      });
+    }
+
+    results.push(inward);
   }
 
-  return inward;
+  // Return array if input was array, otherwise return single object
+  return Array.isArray(inwardData) ? results : results[0];
 };
 
 /**

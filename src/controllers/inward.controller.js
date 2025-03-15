@@ -17,8 +17,31 @@ const createInward = catchAsync(async (req, res) => {
     );
   }
 
-  const inward = await inwardService.createInward(req.body, req.user);
-  res.status(httpStatus.CREATED).send(ApiResponse.success(httpStatus.CREATED, 'Inward created successfully', inward));
+  // Ensure req.body is an array
+  const inwardItems = Array.isArray(req.body) ? req.body : [req.body];
+  
+  // Check if array is empty
+  if (inwardItems.length === 0) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "No inward items provided"
+    );
+  }
+
+  // Process each inward item
+  const results = [];
+  for (const item of inwardItems) {
+    const inward = await inwardService.createInward(item, req.user);
+    results.push(inward);
+  }
+
+  res.status(httpStatus.CREATED).send(
+    ApiResponse.success(
+      httpStatus.CREATED, 
+      inwardItems.length > 1 ? 'Multiple inwards created successfully' : 'Inward created successfully', 
+      results
+    )
+  );
 });
 
 /**

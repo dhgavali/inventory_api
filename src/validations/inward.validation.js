@@ -1,37 +1,30 @@
 const Joi = require("joi");
 
 const createInward = {
-  body: Joi.object().keys({
-    source: Joi.string().valid("MANUFACTURED", "SUPPLIER").required(),
-    productId: Joi.string().required().uuid(),
-    manufacturedQty: Joi.when("source", {
-      is: "MANUFACTURED",
-      then: Joi.number().integer().min(1).required(),
-      otherwise: Joi.number().optional(),
+  body: Joi.alternatives().try(
+    // Accept a single object
+    Joi.object().keys({
+      productId: Joi.string().required(),
+      manufacturedQty: Joi.number(),
+      qtyIncharge: Joi.number(),
+      qtySupervisor: Joi.number(),
+      source: Joi.string().valid('MANUFACTURED', 'SUPPLIER').required(),
+      date: Joi.date().required(),
+      // other fields...
     }),
-    qtyIncharge: Joi.when("source", {
-      is: "MANUFACTURED",
-      then: Joi.number().integer().min(1).required(),
-      otherwise: Joi.number().optional(),
-    }),
-    qtySupervisor: Joi.when("source", {
-      is: "MANUFACTURED",
-      then: Joi.number().integer().min(1),
-      otherwise: Joi.number().optional(),
-    }),
-    finalQty: Joi.when("source", {
-      is: "SUPPLIER",
-      then: Joi.number().integer().min(1).required(),
-      otherwise: Joi.number().optional(),
-    }),
-    supplierId: Joi.when("source", {
-      is: "SUPPLIER",
-      then: Joi.string().required().uuid(),
-      otherwise: Joi.string().optional(),
-    }),
-    date: Joi.date().default(new Date()),
-    time: Joi.date().default(new Date()),
-  }),
+    // Accept an array of objects
+    Joi.array().items(
+      Joi.object().keys({
+        productId: Joi.string().required(),
+        manufacturedQty: Joi.number(),
+        qtyIncharge: Joi.number(),
+        qtySupervisor: Joi.number(),
+        source: Joi.string().valid('MANUFACTURED', 'SUPPLIER').required(),
+        date: Joi.date().required(),
+        // other fields...
+      })
+    ).min(1)
+  ),
 };
 
 const getInwards = {
