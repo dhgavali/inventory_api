@@ -44,6 +44,12 @@ const queryPlants = async (filter, options, loggedInUser) => {
     where: filter,
   });
 
+  const members = await prisma.user.findMany();
+
+  plants.forEach(plant => {
+    plant.members = members.filter(member => member.plantId === plant.id);
+  });
+
   const columns = getPlantColumns(loggedInUser.role);
 
   return {
