@@ -113,10 +113,30 @@ const getSupplierColumns = (userRole) => {
   return baseColumns;
 };
 
+
+const getOutwardColumns = (userRole) => {
+  const baseColumns = [
+    { field: 'productId', headerName: 'Product', width: 100 },
+    { field: 'qty', headerName: 'Qty', width: 100 },
+    { field: 'date', headerName: 'Date', width: 150 },
+    { field: 'plantId', headerName: 'Plant', width: 100 },
+    { field: 'plantName', headerName: 'Plant Name', width: 100 },
+    { field: 'designName', headerName: 'Design Name', width: 100 },
+    { field: 'createdAt', headerName: 'Created At', width: 150 },
+    { field: 'updatedAt', headerName: 'Updated At', width: 150 },
+  ];
+
+  if (userRole === 'ADMIN') {
+    baseColumns.push({ field: 'handleProcess', headerName: 'Actions', width: 150 });
+  }
+
+  return baseColumns;
+};
 module.exports = {
   getUserColumns,
   getProductColumns,
   getPlantColumns,
   getInwardColumns,
+  getOutwardColumns,
   getSupplierColumns,
 };

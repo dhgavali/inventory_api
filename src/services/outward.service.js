@@ -1,5 +1,6 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
+const { getOutwardColumns } = require("../utils/ColumnModels");
 const prisma = require("../database/prisma");
 
 /**
@@ -163,6 +164,11 @@ const queryOutwards = async (filter, options, loggedInUser) => {
       ? { [options.sortBy]: options.sortOrder || "desc" }
       : { date: "desc" },
     include: {
+      plant: {
+        select: {
+          name: true,
+        },
+      },
       product: {
         select: {
           designName: true,
@@ -181,9 +187,17 @@ const queryOutwards = async (filter, options, loggedInUser) => {
   const count = await prisma.outward.count({
     where: whereCondition,
   });
+  
+  outwards.map((outward) => {
+    outward.designName = outward.product.designName;
+    outward.itemCode = outward.product.itemCode;
+    outward.plantName = outward.plant.name;
 
+  });
+  const columns = getOutwardColumns(loggedInUser.role);
   return {
     outwards,
+    columns,
     page,
     limit,
     totalPages: Math.ceil(count / limit),
