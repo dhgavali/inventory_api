@@ -20,12 +20,12 @@ const createOutward = async (outwardData, loggedInUser) => {
   }
 
   // Check if the product belongs to the user's plant
-  if (product.plantId !== loggedInUser.plantId) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "You can only create outward entries for products in your plant"
-    );
-  }
+  // if (product.plantId !== loggedInUser.plantId) {
+  //   throw new ApiError(
+  //     httpStatus.FORBIDDEN,
+  //     "You can only create outward entries for products in your plant"
+  //   );
+  // }
 
   // Get the current stock
   const currentDate = new Date();
