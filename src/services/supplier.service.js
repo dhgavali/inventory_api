@@ -1,6 +1,7 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
 const prisma = require("../database/prisma");
+const { getSupplierColumns } = require("../utils/ColumnModels");
 
 /**
  * Create a supplier
