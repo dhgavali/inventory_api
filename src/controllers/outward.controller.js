@@ -1,5 +1,6 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
+const ApiResponse = require("../utils/ApiResponse");
 const catchAsync = require("../utils/catchAsync");
 const pick = require("../utils/pick");
 const { outwardService } = require("../services");
@@ -17,7 +18,7 @@ const createOutward = catchAsync(async (req, res) => {
   }
 
   const outward = await outwardService.createOutward(req.body, req.user);
-  res.status(httpStatus.CREATED).send(outward);
+  res.status(httpStatus.CREATED).send(ApiResponse.success(httpStatus.CREATED, 'Outward created successfully', outward));
 });
 
 /**
@@ -48,7 +49,9 @@ const getOutwards = catchAsync(async (req, res) => {
 
   const options = pick(req.query, ["sortBy", "limit", "page", "sortOrder"]);
   const result = await outwardService.queryOutwards(filter, options, req.user);
-  res.send(result);
+  // res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Inwards fetched successfully', result));
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Outwards fetched successfully', result));
+
 });
 
 /**
@@ -76,7 +79,7 @@ const getOutward = catchAsync(async (req, res) => {
     );
   }
 
-  res.send(outward);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Outward fetched successfully', outward));
 });
 
 module.exports = {
