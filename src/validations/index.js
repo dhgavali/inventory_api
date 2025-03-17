@@ -6,3 +6,4 @@ module.exports.supplierValidation = require("./supplier.validation");
 module.exports.inwardValidation = require("./inward.validation");
 module.exports.outwardValidation = require("./outward.validation");
 module.exports.stockValidation = require("./stock.validation");
+module.exports.categoryValidation = require('./category.validation');

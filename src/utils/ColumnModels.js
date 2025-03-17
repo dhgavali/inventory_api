@@ -132,6 +132,23 @@ const getOutwardColumns = (userRole) => {
 
   return baseColumns;
 };
+
+const getCategoryColumns = (userRole) => {
+  // Base columns for all users
+  const baseColumns = [
+    { field: 'name', headerName: 'Name', width: 150 },
+    { field: 'categoryCode', headerName: 'Category Code', width: 150 },
+    { field: 'createdAt', headerName: 'Created At', width: 150 },
+    { field: 'updatedAt', headerName: 'Updated At', width: 150 },
+  ];
+
+  if (userRole === 'ADMIN') {
+    baseColumns.push({ field: 'handleProcess', headerName: 'Actions', width: 150 });
+  }
+
+  return baseColumns;
+};
+
 module.exports = {
   getUserColumns,
   getProductColumns,
@@ -139,4 +156,5 @@ module.exports = {
   getInwardColumns,
   getOutwardColumns,
   getSupplierColumns,
+  getCategoryColumns,
 };

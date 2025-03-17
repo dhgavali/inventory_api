@@ -7,3 +7,4 @@ module.exports.supplierService = require("./supplier.service");
 module.exports.inwardService = require("./inward.service");
 module.exports.outwardService = require("./outward.service");
 module.exports.stockService = require("./stock.service");
+module.exports.categoryService = require('./category.service');

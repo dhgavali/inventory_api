@@ -98,16 +98,37 @@ const queryProducts = async (filter, options, loggedInUser) => {
  * @returns {Promise<Array>}
  */
 const getProductList = async (loggedInUser) => {
-  return prisma.product.findMany({
+  const products = await prisma.product.findMany({
     select: {
       id: true,
       designName: true,
       itemCode: true,
+      bagSize: true,
+      traySize: true,
+      category: true,
+      currentStock: true,
     },
     orderBy: {
       designName: "asc",
     },
   });
+  const productPairs = products.reduce((acc, product) => {
+    acc[product.id] = {
+      id: product.id,
+      name: product.designName,
+      itemCode: product.itemCode,
+      currentStock: product.currentStock,
+      bagSize: product.bagSize,
+      traySize: product.traySize,
+      category: product.category,
+    };
+    return acc;
+  }, {});
+  
+  return {
+    products,
+    productPairs
+  }
 };
 
 /**

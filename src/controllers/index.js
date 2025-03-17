@@ -6,3 +6,5 @@ module.exports.supplierController = require("./supplier.controller");
 module.exports.inwardController = require("./inward.controller");
 module.exports.outwardController = require("./outward.controller");
 module.exports.stockController = require("./stock.controller");
+module.exports.categoryController = require('./category.controller');
+

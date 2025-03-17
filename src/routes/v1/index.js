@@ -7,6 +7,7 @@ const supplierRoute = require("./supplier.route");
 const inwardRoute = require("./inward.route");
 const outwardRoute = require("./outward.route");
 const stockRoute = require("./stock.route");
+const categoryRoute = require('./categories.route');
 const config = require("../../config/config");
 
 const router = express.Router();
@@ -43,6 +44,10 @@ const defaultRoutes = [
   {
     path: "/stock",
     route: stockRoute,
+  },
+  {
+    path: "/categories",
+    route: categoryRoute,
   },
 ];
 

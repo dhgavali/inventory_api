@@ -89,6 +89,17 @@ const createInward = async (inwardData, loggedInUser) => {
       status = "APPROVED";
     }
 
+    // update the current quantity in the database; 
+    if (status === "APPROVED") {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+      });
+      const updatedCurrentStock = (product ? product.currentStock : 0) + finalQty;
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { currentStock: updatedCurrentStock },
+      });
+    }
     // Create inward entry
     const inward = await prisma.inward.create({
       data: {
@@ -387,6 +398,17 @@ const approveInward = async (inwardId, approvalData, loggedInUser) => {
       updatedAt: new Date(),
     },
   });
+
+ 
+    const product = await prisma.product.findUnique({
+      where: { id: item.productId },
+    });
+    const updatedCurrentStock = (product ? product.currentStock : 0) + finalQty;
+    await prisma.product.update({
+      where: { id: item.productId },
+      data: { currentStock: updatedCurrentStock },
+    });
+  
 
   // Update stock entry for the day
   const today = new Date(inward.date);

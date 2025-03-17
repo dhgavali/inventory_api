@@ -40,31 +40,38 @@ const createOutward = async (outwardData, loggedInUser) => {
     },
   });
 
-  let currentStock;
-  if (todayStock) {
-    currentStock =
-      todayStock.openingStock + todayStock.inwardQty - todayStock.outwardQty;
-  } else {
-    // Find the most recent stock entry
-    const lastStock = await prisma.stock.findFirst({
-      where: {
-        productId: outwardData.productId,
-        date: {
-          lt: currentDate,
-        },
-      },
-      orderBy: {
-        date: "desc",
-      },
-    });
-
-    if (lastStock) {
-      currentStock = lastStock.closingStock;
-    } else {
-      // No stock history, use opening stock from product
-      currentStock = product.openingStock;
+  const currentStock = await prisma.product.findUnique({
+    where: { id: outwardData.productId },
+    select : {
+      currentStock: true,
     }
-  }
+  });
+  
+
+  // if (todayStock) {
+  //   currentStock =
+  //     todayStock.openingStock + todayStock.inwardQty - todayStock.outwardQty;
+  // } else {
+  //   // Find the most recent stock entry
+  //   const lastStock = await prisma.stock.findFirst({
+  //     where: {
+  //       productId: outwardData.productId,
+  //       date: {
+  //         lt: currentDate,
+  //       },
+  //     },
+  //     orderBy: {
+  //       date: "desc",
+  //     },
+  //   });
+
+  //   if (lastStock) {
+  //     currentStock = lastStock.closingStock;
+  //   } else {
+  //     // No stock history, use opening stock from product
+  //     currentStock = product.openingStock;
+  //   }
+  // }
 
   // Check if there's enough stock
   if (currentStock < outwardData.quantity) {
@@ -81,6 +88,12 @@ const createOutward = async (outwardData, loggedInUser) => {
       plantId: loggedInUser.plantId,
       createdById: loggedInUser.id,
     },
+  });
+  // update the current stock in products table as well
+  const updatedCurrentStock = (currentStock ? currentStock.currentStock : 0) - outwardData.quantity;
+  await prisma.product.update({
+    where: { id: outwardData.productId },
+    data: { currentStock: updatedCurrentStock },
   });
 
   // Update or create stock entry for the day
