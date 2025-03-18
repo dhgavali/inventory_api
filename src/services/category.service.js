@@ -45,7 +45,7 @@ const queryCategories = async (filter, options, loggedInUser) => {
   const page = options.page || 1;
   const limit = options.limit || 10;
   const skip = (page - 1) * limit;
-
+  
   const categories = await prisma.category.findMany({
     where: filter,
     skip,

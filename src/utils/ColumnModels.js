@@ -78,6 +78,8 @@ const getInwardColumns = (userRole) => {
   // Base columns for all users
   const baseColumns = [
     { field: 'source', headerName: 'Source', width: 100 },
+    { field: 'productId', headerName: 'Product', width: 100 },
+    { field: 'productName', headerName: 'Product Name', width: 100 },
     { field: 'manufacturedQty', headerName: 'Manufactured Qty', width: 100 },
     { field: 'qtyIncharge', headerName: 'Qty Incharge', width: 100 },
     { field: 'qtySupervisor', headerName: 'Qty Supervisor', width: 100 },

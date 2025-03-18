@@ -29,6 +29,7 @@ const createProduct = {
     qrBarcode: Joi.string().allow(null, ""),
     bagSize: Joi.number().integer().required(),
     traySize: Joi.number().integer().required(),
+    categoryId: Joi.string().allow(null, ""),
   }),
 };
 

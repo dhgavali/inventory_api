@@ -19,6 +19,8 @@ const allRoles = {
     'createOutward',
     'manageProducts',
     'getReports',
+    'getCategories',
+    'manageCategories',
   ],
   ADMIN: [
     'getUsers',
@@ -34,6 +36,8 @@ const allRoles = {
     'createOutward',
     'approveInwards',
     'getReports',
+    'getCategories',
+    'manageCategories',
   ],
 };
 
