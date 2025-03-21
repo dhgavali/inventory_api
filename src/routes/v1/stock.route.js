@@ -29,12 +29,14 @@ router
     stockController.getCurrentStock
   );
 
+router.route("/monthly-report").get(
+  checkRole("MANAGER", "ADMIN"),
+  // validate(stockValidation.generateMonthlyReport),
+  stockController.generateMonthlyReport
+);
+
 router
-  .route("/:productId/monthly-report")
-  .get(
-    checkRole("MANAGER", "ADMIN"),
-    validate(stockValidation.generateMonthlyReport),
-    stockController.generateMonthlyReport
-  );
+  .route("/daily-report")
+  .get(checkRole("MANAGER", "ADMIN"), stockController.getDailyReport);
 
 module.exports = router;
