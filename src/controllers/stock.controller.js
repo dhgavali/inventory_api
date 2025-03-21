@@ -3,6 +3,7 @@ const ApiError = require("../utils/ApiError");
 const catchAsync = require("../utils/catchAsync");
 const pick = require("../utils/pick");
 const { stockService } = require("../services");
+const ApiResponse = require("../utils/ApiResponse");
 
 /**
  * Get current stock for a product
@@ -80,13 +81,6 @@ const getStockAlerts = catchAsync(async (req, res) => {
  * @route GET /api/v1/stock/:productId/monthly-report
  */
 const generateMonthlyReport = catchAsync(async (req, res) => {
-  if (!req.user.plantId) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      "You must be assigned to a plant to generate reports"
-    );
-  }
-
   if (!["MANAGER", "ADMIN"].includes(req.user.role)) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
@@ -94,17 +88,51 @@ const generateMonthlyReport = catchAsync(async (req, res) => {
     );
   }
 
-  // Default to current month and year if not provided
+  const filter = {};
+
+  if (req.query.productId) {
+    filter.productId = req.query.productId;
+  }
+
   const month = parseInt(req.query.month) || new Date().getMonth() + 1;
   const year = parseInt(req.query.year) || new Date().getFullYear();
 
-  const report = await stockService.generateMonthlyReport(
-    req.params.productId,
-    month,
-    year,
-    req.user
-  );
-  res.send(report);
+  filter.month = month;
+  filter.year = year;
+
+  const options = pick(req.query, ["limit", "page", "sortOrder"]);
+  const report = await stockService.getMonthlyReport(filter, options, req.user);
+
+  res.status(httpStatus.OK).send(report);
+});
+
+const getDailyReport = catchAsync(async (req, res) => {
+  const filter = pick(req.query, ["productId"]);
+
+  if (req.query.startDate && req.query.endDate) {
+    const startDate = new Date(req.query.startDate);
+    const endDate = new Date(req.query.endDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    filter.dateRange = {
+      start: startDate,
+      end: endDate,
+    };
+  } else {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 2);
+    startDate.setHours(0, 0, 0, 0);
+
+    filter.dateRange = {
+      start: startDate,
+      end: endDate,
+    };
+  }
+
+  const options = pick(req.query, ["sortBy", "limit", "page", "sortOrder"]);
+  const result = await stockService.getDailyReport(filter, options, req.user);
+  res.status(httpStatus.OK).send(result);
 });
 
 module.exports = {
@@ -112,4 +140,5 @@ module.exports = {
   getStockHistory,
   getStockAlerts,
   generateMonthlyReport,
+  getDailyReport,
 };

@@ -233,135 +233,300 @@ const getStockAlerts = async (options, loggedInUser) => {
   };
 };
 
-/**
- * Generate monthly report for a product
- * @param {string} productId
- * @param {number} month
- * @param {number} year
- * @param {Object} loggedInUser
- * @returns {Promise<Object>}
- */
-const generateMonthlyReport = async (productId, month, year, loggedInUser) => {
-  // Check if the product exists
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-  });
+const getMonthlyReport = async (filter, options, loggedInUser) => {
+  const page = options.page || 1;
+  const limit = options.limit || 10;
+  const skip = (page - 1) * limit;
 
-  if (!product) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
+  const productWhere = {
+    plantId: loggedInUser.plantId,
+  };
+
+  if (filter.productId) {
+    productWhere.id = filter.productId;
   }
 
-  // Check if the product belongs to the user's plant
-  if (product.plantId !== loggedInUser.plantId) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "You can only access products in your plant"
-    );
-  }
-
-  // Get start and end of the month
-  const startOfMonth = new Date(year, month - 1, 1);
-  const endOfMonth = new Date(year, month, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
-
-  // Get all stock entries for the month
-  const stockEntries = await prisma.stock.findMany({
-    where: {
-      productId,
-      plantId: loggedInUser.plantId,
-      date: {
-        gte: startOfMonth,
-        lte: endOfMonth,
-      },
-    },
-    orderBy: {
-      date: "asc",
+  const products = await prisma.product.findMany({
+    where: productWhere,
+    select: {
+      id: true,
+      designName: true,
+      itemCode: true,
+      openingStock: true,
     },
   });
 
-  // Get the last stock entry from the previous month to determine opening stock
-  const previousMonthEnd = new Date(year, month - 1, 0);
-  previousMonthEnd.setHours(23, 59, 59, 999);
+  const monthlyReports = [];
 
-  const previousMonthStock = await prisma.stock.findFirst({
-    where: {
-      productId,
-      plantId: loggedInUser.plantId,
-      date: {
-        lte: previousMonthEnd,
-      },
-    },
-    orderBy: {
-      date: "desc",
-    },
-  });
-
-  // Calculate totals
-  const openingStock = previousMonthStock
-    ? previousMonthStock.closingStock
-    : product.openingStock;
-
-  let inwardQty = 0;
-  let outwardQty = 0;
-  let closingStock = openingStock;
-
-  stockEntries.forEach((entry) => {
-    inwardQty += entry.inwardQty;
-    outwardQty += entry.outwardQty;
-  });
-
-  closingStock = openingStock + inwardQty - outwardQty;
-
-  // Check if report already exists
-  const existingReport = await prisma.monthlyReport.findUnique({
-    where: {
-      productId_month_year_plantId: {
-        productId,
-        month,
-        year,
-        plantId: loggedInUser.plantId,
-      },
-    },
-  });
-
-  let report;
-  if (existingReport) {
-    // Update existing report
-    report = await prisma.monthlyReport.update({
+  for (const product of products) {
+    let monthlyReport = await prisma.monthlyReport.findUnique({
       where: {
-        id: existingReport.id,
-      },
-      data: {
-        openingStock,
-        inwardQty,
-        outwardQty,
-        closingStock,
-        generatedAt: new Date(),
+        productId_month_year_plantId: {
+          productId: product.id,
+          month: filter.month,
+          year: filter.year,
+          plantId: loggedInUser.plantId,
+        },
       },
     });
-  } else {
-    // Create new report
-    report = await prisma.monthlyReport.create({
-      data: {
-        productId,
-        plantId: loggedInUser.plantId,
-        month,
-        year,
-        openingStock,
-        inwardQty,
-        outwardQty,
-        closingStock,
-        generatedAt: new Date(),
-      },
+
+    if (!monthlyReport) {
+      const startOfMonth = new Date(filter.year, filter.month - 1, 1);
+      const endOfMonth = new Date(filter.year, filter.month, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      const inwardEntries = await prisma.inward.findMany({
+        where: {
+          productId: product.id,
+          plantId: loggedInUser.plantId,
+          date: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+          status: "APPROVED",
+        },
+      });
+
+      const outwardEntries = await prisma.outward.findMany({
+        where: {
+          productId: product.id,
+          plantId: loggedInUser.plantId,
+          date: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+        },
+      });
+
+      const inwardQty = inwardEntries.reduce(
+        (sum, entry) => sum + entry.finalQty,
+        0
+      );
+      const outwardQty = outwardEntries.reduce(
+        (sum, entry) => sum + entry.quantity,
+        0
+      );
+
+      const lastDayPrevMonth = new Date(filter.year, filter.month - 1, 0);
+      lastDayPrevMonth.setHours(23, 59, 59, 999);
+
+      const previousStock = await prisma.stock.findFirst({
+        where: {
+          productId: product.id,
+          plantId: loggedInUser.plantId,
+          date: {
+            lte: lastDayPrevMonth,
+          },
+        },
+        orderBy: {
+          date: "desc",
+        },
+      });
+
+      const openingStock = previousStock
+        ? previousStock.closingStock
+        : product.openingStock;
+
+      const closingStock = openingStock + inwardQty - outwardQty;
+
+      monthlyReport = await prisma.monthlyReport.create({
+        data: {
+          productId: product.id,
+          plantId: loggedInUser.plantId,
+          month: filter.month,
+          year: filter.year,
+          openingStock,
+          inwardQty,
+          outwardQty,
+          closingStock,
+          generatedAt: new Date(),
+        },
+      });
+    }
+
+    monthlyReports.push({
+      ...monthlyReport,
+      itemCode: product.itemCode,
+      productName: product.designName,
+      monthName: new Date(0, filter.month - 1).toLocaleString("default", {
+        month: "long",
+      }),
     });
   }
+
+  monthlyReports.sort((a, b) => a.productName.localeCompare(b.productName));
+
+  const paginatedReports = monthlyReports.slice(skip, skip + limit);
+
+  const columns = [
+    { field: "month", headerName: "Month", width: 120 },
+    { field: "year", headerName: "Year", width: 100 },
+    { field: "monthName", headerName: "Month Name", width: 150 },
+    { field: "itemCode", headerName: "Item Code", width: 150 },
+    { field: "productName", headerName: "Product Name", width: 200 },
+    { field: "openingStock", headerName: "Opening Stock", width: 150 },
+    { field: "inwardQty", headerName: "Inward Qty", width: 120 },
+    { field: "outwardQty", headerName: "Outward Qty", width: 120 },
+    { field: "closingStock", headerName: "Closing Stock", width: 150 },
+    { field: "generatedAt", headerName: "Generated At", width: 180 },
+  ];
 
   return {
-    ...report,
-    product,
-    monthName: moment()
-      .month(month - 1)
-      .format("MMMM"),
+    reports: paginatedReports,
+    columns,
+    page,
+    limit,
+    totalPages: Math.ceil(monthlyReports.length / limit),
+    totalResults: monthlyReports.length,
+  };
+};
+
+const getDailyReport = async (filter, options, loggedInUser) => {
+  const page = options.page || 1;
+  const limit = options.limit || 10;
+  const skip = (page - 1) * limit;
+
+  const whereCondition = {
+    plantId: loggedInUser.plantId,
+  };
+
+  if (filter.productId) {
+    whereCondition.id = filter.productId;
+  }
+
+  const products = await prisma.product.findMany({
+    where: whereCondition,
+    select: {
+      id: true,
+      designName: true,
+      itemCode: true,
+      openingStock: true,
+      currentStock: true,
+    },
+  });
+  const reportData = [];
+
+  for (const product of products) {
+    const dateRange = filter.dateRange;
+    const datesInRange = [];
+    const currentDate = new Date(dateRange.start);
+
+    while (currentDate <= dateRange.end) {
+      datesInRange.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    for (const date of datesInRange) {
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const stockEntry = await prisma.stock.findUnique({
+        where: {
+          productId_date: {
+            productId: product.id,
+            date: dayStart,
+          },
+        },
+      });
+
+      const inwardEntries = await prisma.inward.findMany({
+        where: {
+          productId: product.id,
+          date: {
+            gte: dayStart,
+            lte: dayEnd,
+          },
+          status: "APPROVED",
+        },
+      });
+
+      const outwardEntries = await prisma.outward.findMany({
+        where: {
+          productId: product.id,
+          date: {
+            gte: dayStart,
+            lte: dayEnd,
+          },
+        },
+      });
+
+      const inwardQty = inwardEntries.reduce(
+        (sum, entry) => sum + entry.finalQty,
+        0
+      );
+      const outwardQty = outwardEntries.reduce(
+        (sum, entry) => sum + entry.quantity,
+        0
+      );
+
+      let openingStock, closingStock;
+
+      if (stockEntry) {
+        openingStock = stockEntry.openingStock;
+        closingStock = stockEntry.closingStock;
+      } else {
+        const previousStock = await prisma.stock.findFirst({
+          where: {
+            productId: product.id,
+            date: {
+              lt: dayStart,
+            },
+          },
+          orderBy: {
+            date: "desc",
+          },
+        });
+
+        if (previousStock) {
+          openingStock = previousStock.closingStock;
+        } else {
+          openingStock = product.openingStock;
+        }
+
+        closingStock = openingStock + inwardQty - outwardQty;
+      }
+
+      reportData.push({
+        date: dayStart,
+        itemCode: product.itemCode,
+        productName: product.designName,
+        openingStock,
+        inwardQty,
+        outwardQty,
+        closingStock,
+      });
+    }
+  }
+
+  reportData.sort((a, b) => {
+    if (a.date.getTime() !== b.date.getTime()) {
+      return a.date.getTime() - b.date.getTime();
+    }
+    return a.productName.localeCompare(b.productName);
+  });
+
+  const paginatedData = reportData.slice(skip, skip + limit);
+
+  const columns = [
+    { field: "date", headerName: "Date", width: 150 },
+    { field: "itemCode", headerName: "Item Code", width: 150 },
+    { field: "productName", headerName: "Product Name", width: 200 },
+    { field: "openingStock", headerName: "Opening Stock", width: 150 },
+    { field: "inwardQty", headerName: "Inward Qty", width: 120 },
+    { field: "outwardQty", headerName: "Outward Qty", width: 120 },
+    { field: "closingStock", headerName: "Closing Stock", width: 150 },
+  ];
+
+  return {
+    reports: paginatedData,
+    columns,
+    page,
+    limit,
+    totalPages: Math.ceil(reportData.length / limit),
+    totalResults: reportData.length,
   };
 };
 
@@ -369,5 +534,6 @@ module.exports = {
   getCurrentStock,
   queryStockHistory,
   getStockAlerts,
-  generateMonthlyReport,
+  getMonthlyReport,
+  getDailyReport,
 };
