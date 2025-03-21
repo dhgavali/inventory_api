@@ -21,7 +21,8 @@ const getCurrentStock = catchAsync(async (req, res) => {
     req.params.productId,
     req.user
   );
-  res.send(stock);
+  // res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Products fetched successfully', result));
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Stock fetched successfully', stock));
 });
 
 /**
@@ -56,7 +57,7 @@ const getStockHistory = catchAsync(async (req, res) => {
     options,
     req.user
   );
-  res.send(result);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Stock history fetched successfully', result));
 });
 
 /**
@@ -73,7 +74,7 @@ const getStockAlerts = catchAsync(async (req, res) => {
 
   const options = pick(req.query, ["limit", "page"]);
   const result = await stockService.getStockAlerts(options, req.user);
-  res.send(result);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Stock alerts fetched successfully', result));
 });
 
 /**
@@ -103,7 +104,7 @@ const generateMonthlyReport = catchAsync(async (req, res) => {
   const options = pick(req.query, ["limit", "page", "sortOrder"]);
   const report = await stockService.getMonthlyReport(filter, options, req.user);
 
-  res.status(httpStatus.OK).send(report);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Monthly report fetched successfully', report));
 });
 
 const getDailyReport = catchAsync(async (req, res) => {
@@ -132,7 +133,7 @@ const getDailyReport = catchAsync(async (req, res) => {
 
   const options = pick(req.query, ["sortBy", "limit", "page", "sortOrder"]);
   const result = await stockService.getDailyReport(filter, options, req.user);
-  res.status(httpStatus.OK).send(result);
+  res.status(httpStatus.OK).send(ApiResponse.success(httpStatus.OK, 'Daily report fetched successfully', result));
 });
 
 module.exports = {
